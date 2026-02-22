@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  REVIEW
+  IN_PRODUCTION
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  passHash  String
+  role      String   @default("customer")
+  createdAt DateTime @default(now())
+
+  orders      Order[]
+  enrollments Enrollment[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  priceCents  Int
+  category    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  items OrderItem[]
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  priceCents  Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  enrollments Enrollment[]
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id         String      @id @default(cuid())
+  userId     String
+  status     OrderStatus @default(PENDING_PAYMENT)
+  totalCents Int
+  createdAt  DateTime    @default(now())
+
+  user  User        @relation(fields: [userId], references: [id])
+  items OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String?
+  courseId  String?
+  qty       Int     @default(1)
+  unitCents Int
+  variant   String?
+
+  order   Order    @relation(fields: [orderId], references: [id])
+  product Product? @relation(fields: [productId], references: [id])
+  course  Course?  @relation(fields: [courseId], references: [id])
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  course Course @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, courseId])
+}
