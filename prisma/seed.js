@@ -1,7 +1,9 @@
 const { PrismaClient } = require("@prisma/client");
+const bcrypt = require("bcrypt");
 const prisma = new PrismaClient();
 
 async function main() {
+  // Productos
   await prisma.product.createMany({
     data: [
       { name: "Playera sublimada", priceCents: 39900, category: "Ropa" },
@@ -11,6 +13,7 @@ async function main() {
     skipDuplicates: true
   });
 
+  // Cursos
   await prisma.course.createMany({
     data: [
       { title: "Sublimación 101", priceCents: 79900 },
@@ -19,7 +22,23 @@ async function main() {
     skipDuplicates: true
   });
 
-  console.log("Seed listo.");
+  // Admin (si no existe)
+  const adminEmail = "admin@limine.io"; // cámbialo si quieres
+  const pass = "CAMBIA-ESTA-CONTRASEÑA"; // y esta también, obvio
+  const passHash = await bcrypt.hash(pass, 10);
+
+  await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: { role: "admin" },
+    create: {
+      email: adminEmail,
+      name: "Admin",
+      passHash,
+      role: "admin",
+    },
+  });
+
+  console.log("Seed listo (incluye admin).");
 }
 
 main()
