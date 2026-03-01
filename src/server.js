@@ -12,8 +12,9 @@ const app = express();
 
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5500";
 const COOKIE_SECURE = process.env.COOKIE_SECURE === "true";
-// Opcional: si quieres forzar cookie compartida por subdominios (admin.limine.io + api.limine.io)
-const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined; // e.g. ".limine.io"
+
+// Recomendado: ".limine.io" (con punto) para compartir cookie entre subdominios
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
 
 app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
@@ -59,7 +60,7 @@ function setAuthCookie(res, token) {
     httpOnly: true,
     secure: COOKIE_SECURE,
     sameSite: "lax",
-    domain: COOKIE_DOMAIN, // si no lo defines, queda host-only (api.limine.io) y está bien
+    domain: COOKIE_DOMAIN,
   });
 }
 
@@ -147,7 +148,12 @@ app.post(
 );
 
 app.post("/auth/logout", (req, res) => {
-  res.clearCookie("token", { domain: COOKIE_DOMAIN });
+  // Debe coincidir con cómo se creó la cookie
+  res.clearCookie("token", {
+    domain: COOKIE_DOMAIN,
+    secure: COOKIE_SECURE,
+    sameSite: "lax",
+  });
   res.json({ ok: true });
 });
 
@@ -336,7 +342,6 @@ app.patch(
   })
 );
 
-// soft delete: desactiva
 app.delete(
   "/admin/products/:id",
   requireAuth,
@@ -470,7 +475,6 @@ app.patch(
 
 // ---------- error handler ----------
 app.use((err, req, res, next) => {
-  // Zod validation
   if (err?.name === "ZodError") {
     return res.status(400).json({ error: "Datos inválidos", details: err.errors });
   }
